@@ -1,8 +1,9 @@
 {
   "expo": {
-    "name": "zamorano-plant-app",
+    "name": "Zamorano",
     "slug": "zamorano-plant-app",
-    "version": "1.0.0",
+    "scheme": "zamorano",
+    "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -10,21 +11,44 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#FAF7F2"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "cr.zamorano.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Zamorano usa la cámara para identificar plantas y escanear códigos QR.",
+        "NSPhotoLibraryUsageDescription": "Zamorano accede a tus fotos para identificar plantas guardadas en la galería."
+      }
     },
     "android": {
+      "package": "cr.zamorano.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#3DA35D"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA"
+      ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "server"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Zamorano usa la cámara para identificar plantas y escanear códigos QR."
+        }
+      ]
+    ],
+    "extra": {
+      "router": {}
     }
   }
 }
