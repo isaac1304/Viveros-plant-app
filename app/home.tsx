@@ -1,4 +1,5 @@
-import { ScrollView, View, Text, Image, Pressable } from 'react-native';
+import { useState } from 'react';
+import { Alert, Platform, ScrollView, View, Text, Image, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -9,13 +10,15 @@ import { colors, radius, shadows, spacing } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 import { plants, articles } from '@/data/plants';
 import { useApp } from '@/state/AppContext';
-import { useUser } from '@/state/UserContext';
+import { useAuth, useUser } from '@/state/UserContext';
 import { activeReminders, describeWaterStatus } from '@/lib/reminders';
 
 export default function Home() {
   const router = useRouter();
   const user = useUser();
+  const { signOut } = useAuth();
   const { savedIds, waterLog, markWatered, history } = useApp();
+  const [signingOut, setSigningOut] = useState(false);
   const savedPlants = plants.filter((p) => savedIds.includes(p.id));
   const reminders = activeReminders(savedPlants, waterLog);
   const recentIdentifications = history.slice(0, 6);
@@ -25,6 +28,43 @@ export default function Home() {
     markWatered(id);
   };
 
+  const doSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await signOut();
+    } catch {
+      setSigningOut(false);
+    }
+  };
+
+  const onPressGreeting = () => {
+    if (signingOut) return;
+    if (Platform.OS === 'web') {
+      const ok = typeof window !== 'undefined' && window.confirm(
+        `Estás en ${user.tenant.shortName}. ¿Cerrar sesión?`,
+      );
+      if (ok) void doSignOut();
+      return;
+    }
+    Alert.alert(
+      `Hola, ${user.name}`,
+      `Estás en ${user.tenant.shortName}.`,
+      [
+        { text: 'Seguir aquí', style: 'cancel' },
+        { text: 'Cerrar sesión', style: 'destructive', onPress: () => void doSignOut() },
+      ],
+    );
+  };
+
+  const headerSubtitle = (() => {
+    if (reminders.length > 0) {
+      const n = reminders.length;
+      return `${n} planta${n === 1 ? '' : 's'} necesita${n === 1 ? '' : 'n'} agua`;
+    }
+    if (savedPlants.length > 0) return 'Tus plantas están al día';
+    return `Hoy en ${user.city}, ${user.weather}`;
+  })();
+
   return (
     <ScreenContainer withTabBarPadding>
       <ScrollView contentContainerStyle={{ paddingBottom: spacing['2xl'] }} showsVerticalScrollIndicator={false}>
@@ -33,13 +73,24 @@ export default function Home() {
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'space-between',
             paddingHorizontal: spacing.xl,
             paddingTop: spacing.md,
             paddingBottom: spacing.lg,
           }}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <Pressable
+            onPress={onPressGreeting}
+            disabled={signingOut}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Cuenta de ${user.name}. Tocá para cerrar sesión.`}
+            style={({ pressed }) => ({
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing.md,
+              opacity: pressed || signingOut ? 0.6 : 1,
+            })}
+          >
             <View
               style={{
                 width: 44,
@@ -48,6 +99,8 @@ export default function Home() {
                 backgroundColor: colors.brand[100],
                 alignItems: 'center',
                 justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: colors.brand[300],
               }}
             >
               <Text style={{ fontSize: 18, fontWeight: '700', color: colors.brand[700] }}>
@@ -55,12 +108,16 @@ export default function Home() {
               </Text>
             </View>
             <View>
-              <Text style={typography.bodyMd}>Hola, {user.name} 👋</Text>
-              <Text style={typography.caption}>Hoy en {user.city}, {user.weather}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={typography.bodyMd}>Hola, {user.name} 👋</Text>
+                <Ionicons
+                  name="chevron-down"
+                  size={16}
+                  color={colors.brand[700]}
+                />
+              </View>
+              <Text style={typography.caption}>{headerSubtitle}</Text>
             </View>
-          </View>
-          <Pressable hitSlop={12}>
-            <Ionicons name="notifications-outline" size={24} color={colors.text.secondary} />
           </Pressable>
         </View>
 

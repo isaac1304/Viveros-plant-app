@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Alert, Platform, ScrollView, View, Text, Image } from 'react-native';
+import { ScrollView, View, Text, Image } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { TabBar } from '@/components/TabBar';
@@ -7,7 +7,7 @@ import { Button } from '@/components/Button';
 import { colors, radius, shadows, spacing } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 import { articles } from '@/data/plants';
-import { useAuth, useUser, membershipLabel } from '@/state/UserContext';
+import { useUser, membershipLabel } from '@/state/UserContext';
 
 const BENEFITS = [
   { icon: 'pricetag' as const, label: '15% descuento en plantas' },
@@ -17,37 +17,8 @@ const BENEFITS = [
 ];
 
 export default function Club() {
+  const router = useRouter();
   const user = useUser();
-  const { signOut } = useAuth();
-  const [signingOut, setSigningOut] = useState(false);
-
-  const confirmSignOut = () => {
-    if (signingOut) return;
-    // Web has no native Alert.alert dialog; just sign out directly there.
-    if (Platform.OS === 'web') {
-      void doSignOut();
-      return;
-    }
-    Alert.alert(
-      'Cerrar sesión',
-      `Vas a salir de tu cuenta en ${user.tenant.shortName}. Tus datos quedan guardados.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Cerrar sesión', style: 'destructive', onPress: () => void doSignOut() },
-      ],
-    );
-  };
-
-  const doSignOut = async () => {
-    setSigningOut(true);
-    try {
-      await signOut();
-      // Route guard in app/_layout.tsx redirects to /(auth)/sign-in once
-      // status flips to 'unauthenticated'.
-    } catch {
-      setSigningOut(false);
-    }
-  };
 
   return (
     <ScreenContainer withTabBarPadding>
@@ -175,14 +146,11 @@ export default function Club() {
         </View>
 
         <View style={{ padding: spacing.xl, gap: spacing.md }}>
-          <Button label="Ver historial completo" variant="secondary" onPress={() => {}} fullWidth />
           <Button
-            label={signingOut ? 'Cerrando…' : 'Cerrar sesión'}
-            variant="ghost"
-            onPress={confirmSignOut}
-            loading={signingOut}
+            label="Ver historial completo"
+            variant="secondary"
+            onPress={() => router.push('/history')}
             fullWidth
-            iconLeft={<Ionicons name="log-out-outline" size={18} color={colors.brand[700]} />}
           />
         </View>
       </ScrollView>
