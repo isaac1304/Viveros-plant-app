@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
@@ -11,12 +11,21 @@ import { colors, spacing } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 
 export default function SignIn() {
-  const router = useRouter();
-  const { signIn } = useAuth();
+  const { signIn, status } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // We deliberately don't navigate manually after a successful signIn.
+  // The route guard in app/_layout.tsx redirects /(auth)/* -> /home as soon
+  // as status flips to 'authenticated'. Doing both racy: /home mounts with
+  // profile=null and useUser() throws.
+  // Reset the submitting flag if auth ends up unauthenticated (e.g.
+  // ensureUserDoc threw and UserContext signed the user back out).
+  useEffect(() => {
+    if (status === 'unauthenticated') setSubmitting(false);
+  }, [status]);
 
   const handleSubmit = async () => {
     if (submitting) return;
@@ -28,10 +37,9 @@ export default function SignIn() {
     setSubmitting(true);
     try {
       await signIn(email.trim(), password);
-      router.replace('/home');
+      // Stay 'submitting' — route guard navigates once status === 'authenticated'.
     } catch (err) {
       setError(mapAuthError(err));
-    } finally {
       setSubmitting(false);
     }
   };

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/TextField';
@@ -12,8 +12,7 @@ import { typography } from '@/theme/typography';
 type Field = 'name' | 'email' | 'password' | 'tenantCode' | null;
 
 export default function SignUp() {
-  const router = useRouter();
-  const { signUp } = useAuth();
+  const { signUp, status } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [tenantCode, setTenantCode] = useState('');
@@ -22,6 +21,13 @@ export default function SignUp() {
   const [errorField, setErrorField] = useState<Field>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Same race-avoidance pattern as sign-in: route guard handles navigation
+  // once status flips to 'authenticated'. Reset submitting if it falls back
+  // to 'unauthenticated' (ensureUserDoc threw, etc.).
+  useEffect(() => {
+    if (status === 'unauthenticated') setSubmitting(false);
+  }, [status]);
 
   const validate = (): { ok: true } | { ok: false; field: Field; message: string } => {
     if (!tenantCode.trim())
@@ -54,7 +60,7 @@ export default function SignUp() {
         tenantCode: tenantCode.trim(),
         city: city.trim() || undefined,
       });
-      router.replace('/home');
+      // Stay 'submitting' — route guard navigates once status === 'authenticated'.
     } catch (err) {
       const msg = mapAuthError(err);
       setError(msg);
@@ -63,7 +69,6 @@ export default function SignUp() {
       if (code === 'tenant/not-found') setErrorField('tenantCode');
       else if (code === 'auth/weak-password') setErrorField('password');
       else setErrorField('email');
-    } finally {
       setSubmitting(false);
     }
   };
