@@ -10,13 +10,22 @@ import { typography } from '@/theme/typography';
 import { Button } from '@/components/Button';
 import { identifyPlant } from '@/lib/identify';
 import { plants } from '@/data/plants';
+import { useUser } from '@/state/UserContext';
 
 const isWeb = Platform.OS === 'web';
-const ZAMORANO_PHONE = '50622688257';
 
-const openZamoranoWhatsapp = async () => {
-  const msg = encodeURIComponent('Hola Zamorano, no pude identificar mi planta con la app. ¿Me ayudan?');
-  const url = `https://wa.me/${ZAMORANO_PHONE}?text=${msg}`;
+// Built per-render so it picks up the caller's tenant. Components below call
+// this with their useUser() result; we keep it as a plain function (not a hook)
+// so it works in event handlers.
+async function openTenantWhatsApp(
+  tenantWhatsapp: string | undefined,
+  tenantShortName: string,
+): Promise<void> {
+  if (!tenantWhatsapp) return; // tenant has no number configured — caller should disable the button
+  const msg = encodeURIComponent(
+    `Hola ${tenantShortName}, no pude identificar mi planta con la app. ¿Me ayudan?`,
+  );
+  const url = `https://wa.me/${tenantWhatsapp}?text=${msg}`;
   try {
     const can = await Linking.canOpenURL(url);
     if (!can) throw new Error('cant-open');
@@ -24,7 +33,7 @@ const openZamoranoWhatsapp = async () => {
   } catch {
     if (isWeb && typeof window !== 'undefined') window.open(url, '_blank');
   }
-};
+}
 
 export default function CameraScreen() {
   if (isWeb) return <WebCameraFallback />;
@@ -528,7 +537,9 @@ function IdentifyErrorSheet({
   onRetry: () => void;
   onDismiss: () => void;
 }) {
+  const { tenant } = useUser();
   const looksLikeApiKey = /api[_ ]?key|anthropic|unauthorized|401/i.test(message);
+  const hasWhatsapp = Boolean(tenant.whatsapp);
   return (
     <Animated.View
       entering={FadeIn.duration(180)}
@@ -571,7 +582,7 @@ function IdentifyErrorSheet({
         <Text style={typography.headingMd}>No pudimos identificarla</Text>
         <Text style={typography.bodySm}>
           {looksLikeApiKey
-            ? 'Falta configurar la clave de IA. Mientras tanto, podés consultar al equipo de Zamorano.'
+            ? `Falta configurar la clave de IA. Mientras tanto, podés consultar al equipo de ${tenant.shortName}.`
             : 'A veces ayuda mejorar la foto: que se vea bien la hoja o flor, sin sombras y a buena distancia.'}
         </Text>
         <Text style={[typography.caption, { color: colors.text.tertiary }]} numberOfLines={2}>
@@ -585,13 +596,15 @@ function IdentifyErrorSheet({
             iconLeft={<Ionicons name="refresh" size={18} color="#fff" />}
             fullWidth
           />
-          <Button
-            label="Consultar a Zamorano por WhatsApp"
-            onPress={openZamoranoWhatsapp}
-            variant="secondary"
-            iconLeft={<Ionicons name="logo-whatsapp" size={18} color={colors.brand[700]} />}
-            fullWidth
-          />
+          {hasWhatsapp && (
+            <Button
+              label={`Consultar a ${tenant.shortName} por WhatsApp`}
+              onPress={() => openTenantWhatsApp(tenant.whatsapp, tenant.shortName)}
+              variant="secondary"
+              iconLeft={<Ionicons name="logo-whatsapp" size={18} color={colors.brand[700]} />}
+              fullWidth
+            />
+          )}
           <Pressable
             onPress={onDismiss}
             style={{ alignItems: 'center', paddingVertical: spacing.md }}
@@ -616,7 +629,9 @@ function InlineErrorCard({
   onRetry?: () => void;
   onDismiss: () => void;
 }) {
+  const { tenant } = useUser();
   const looksLikeApiKey = /api[_ ]?key|anthropic|unauthorized|401/i.test(message);
+  const hasWhatsapp = Boolean(tenant.whatsapp);
   return (
     <View
       style={{
@@ -639,7 +654,7 @@ function InlineErrorCard({
       </View>
       <Text style={[typography.bodySm, { color: colors.text.secondary }]}>
         {looksLikeApiKey
-          ? 'Falta configurar la clave de IA. Probá consultar al equipo de Zamorano.'
+          ? `Falta configurar la clave de IA. Probá consultar al equipo de ${tenant.shortName}.`
           : 'Probá una foto más clara de la hoja o flor. Si sigue fallando, consultá al equipo.'}
       </Text>
       <Text style={[typography.caption, { color: colors.text.tertiary }]} numberOfLines={2}>
@@ -660,8 +675,9 @@ function InlineErrorCard({
             <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Reintentar</Text>
           </Pressable>
         )}
+        {hasWhatsapp && (
         <Pressable
-          onPress={openZamoranoWhatsapp}
+          onPress={() => openTenantWhatsApp(tenant.whatsapp, tenant.shortName)}
           style={{
             flex: 1,
             paddingVertical: spacing.sm,
@@ -680,6 +696,7 @@ function InlineErrorCard({
             Consultar
           </Text>
         </Pressable>
+        )}
       </View>
     </View>
   );

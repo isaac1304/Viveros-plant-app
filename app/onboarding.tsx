@@ -28,8 +28,8 @@ const SLIDES: Slide[] = [
   {
     kind: 'info',
     icon: 'qr-code',
-    title: 'Escaneá el QR de tus plantas Zamorano',
-    body: 'Cada planta que comprás trae su ficha digital — toda la información del experto en tu bolsillo.',
+    title: 'Escaneá el QR de tus plantas',
+    body: 'Cada planta que tu vivero vende trae su ficha digital — toda la información del experto en tu bolsillo.',
     iconBg: colors.accent.terracotta,
   },
   {
@@ -65,7 +65,7 @@ export default function Onboarding() {
   const isLast = page === SLIDES.length - 1;
   const isPermissionSlide = current?.kind === 'permission';
 
-  const goHome = () => router.replace('/home');
+  const goAuth = () => router.replace('/(auth)/sign-up');
 
   const handleNext = () => {
     if (!isLast) {
@@ -78,11 +78,11 @@ export default function Onboarding() {
       Promise.all([requestPermission().catch(() => {}), ensureNotificationPermission().catch(() => false)])
         .finally(() => {
           setRequesting(false);
-          goHome();
+          goAuth();
         });
       return;
     }
-    goHome();
+    goAuth();
   };
 
   const primaryLabel = !isLast
@@ -95,8 +95,13 @@ export default function Onboarding() {
 
   return (
     <ScreenContainer>
-      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', padding: spacing.lg }}>
-        <Pressable onPress={() => router.replace('/home')} hitSlop={12}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: spacing.lg }}>
+        <Pressable onPress={() => router.replace('/(auth)/sign-in')} hitSlop={12}>
+          <Text style={[typography.bodyMd, { color: colors.brand[700], fontWeight: '600' }]}>
+            Iniciar sesión
+          </Text>
+        </Pressable>
+        <Pressable onPress={() => router.replace('/(auth)/sign-up')} hitSlop={12}>
           <Text style={[typography.bodyMd, { color: colors.brand[700], fontWeight: '600' }]}>
             Saltar
           </Text>
@@ -173,7 +178,7 @@ export default function Onboarding() {
           loading={requesting}
         />
         {isPermissionSlide && !requesting && (
-          <Pressable onPress={goHome} hitSlop={10} style={{ alignItems: 'center' }}>
+          <Pressable onPress={goAuth} hitSlop={10} style={{ alignItems: 'center' }}>
             <Text style={[typography.bodySm, { color: colors.text.secondary, fontWeight: '600' }]}>
               Más tarde
             </Text>

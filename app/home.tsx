@@ -91,7 +91,7 @@ export default function Home() {
             <HeroAction
               icon="qr-code"
               label="Escanear QR"
-              hint="Plantas Zamorano"
+              hint={`Plantas de ${user.tenant.shortName}`}
               onPress={() => router.push('/qr')}
             />
           </View>
@@ -247,7 +247,7 @@ export default function Home() {
         </View>
 
         {/* Articles from Club */}
-        <SectionHeader title="Del Club Zamorano" actionLabel="Más" onAction={() => router.push('/club')} />
+        <SectionHeader title={`Del Club ${user.tenant.shortName}`} actionLabel="Más" onAction={() => router.push('/club')} />
         <View style={{ paddingHorizontal: spacing.xl, gap: spacing.md }}>
           {articles.map((a) => (
             <View

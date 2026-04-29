@@ -42,7 +42,7 @@ export default function Club() {
             <Text style={[typography.caption, { color: colors.brand[100], textTransform: 'uppercase' }]}>
               1 247 miembros
             </Text>
-            <Text style={[typography.displayLg, { color: '#fff' }]}>Club de Plantas Zamorano</Text>
+            <Text style={[typography.displayLg, { color: '#fff' }]}>Club de Plantas {user.tenant.shortName}</Text>
           </View>
         </View>
 

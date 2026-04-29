@@ -10,6 +10,7 @@ import { typography } from '@/theme/typography';
 import { getPlantById, plants, type Plant } from '@/data/plants';
 import type { IdentifyDetails } from '@/lib/identify';
 import { useApp } from '@/state/AppContext';
+import { useUser } from '@/state/UserContext';
 
 type Tab = 'cuidados' | 'plagas' | 'enfermedades' | 'datos';
 const TABS: { key: Tab; label: string }[] = [
@@ -19,11 +20,10 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'datos', label: 'Datos' },
 ];
 
-const ZAMORANO_PHONE = '50622688257';
-
 export default function ResultScreen() {
   const router = useRouter();
   const { toggleSave, isSaved, addIdentification } = useApp();
+  const { tenant } = useUser();
   const [tab, setTab] = useState<Tab>('cuidados');
   const params = useLocalSearchParams<{
     matchedPlantId?: string;
@@ -73,14 +73,19 @@ export default function ResultScreen() {
   const [waError, setWaError] = useState<string | null>(null);
   const openWhatsapp = async () => {
     const name = view?.commonName ?? 'una planta';
-    const msg = encodeURIComponent(`Hola Zamorano, me interesa la ${name} que identifiqué con la app.`);
-    const url = `https://wa.me/${ZAMORANO_PHONE}?text=${msg}`;
+    const phone = tenant.whatsapp;
+    if (!phone) {
+      setWaError(`Tu vivero no tiene WhatsApp configurado todavía.`);
+      return;
+    }
+    const msg = encodeURIComponent(`Hola ${tenant.shortName}, me interesa la ${name} que identifiqué con la app.`);
+    const url = `https://wa.me/${phone}?text=${msg}`;
     try {
       const can = await Linking.canOpenURL(url);
       if (!can) throw new Error('cant-open');
       await Linking.openURL(url);
     } catch {
-      setWaError(`No se pudo abrir WhatsApp. Llamá al +506 2268-8257 o instalá WhatsApp.`);
+      setWaError(`No se pudo abrir WhatsApp. Instalá WhatsApp e intentá de nuevo.`);
     }
   };
 
@@ -165,7 +170,7 @@ export default function ResultScreen() {
               >
                 <Ionicons name="leaf" size={12} color={colors.brand[700]} />
                 <Text style={{ fontSize: 12, fontWeight: '700', color: colors.brand[900] }}>
-                  En Zamorano
+                  En {tenant.shortName}
                 </Text>
               </View>
             )}
@@ -334,7 +339,7 @@ export default function ResultScreen() {
                     >
                       <Ionicons name="sparkles" size={16} color={colors.brand[700]} />
                       <Text style={[typography.caption, { flex: 1, color: colors.brand[900] }]}>
-                        Ficha generada por AI · Verificá con el equipo de Zamorano antes de aplicar
+                        Ficha generada por AI · Verificá con el equipo de tu vivero antes de aplicar
                         tratamientos.
                       </Text>
                     </View>
@@ -364,7 +369,7 @@ export default function ResultScreen() {
             </>
           ) : (
             <Button
-              label="Consultar a Zamorano por WhatsApp"
+              label={`Consultar a ${tenant.shortName} por WhatsApp`}
               onPress={openWhatsapp}
               fullWidth
               size="lg"

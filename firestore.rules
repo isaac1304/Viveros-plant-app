@@ -1,0 +1,130 @@
+rules_version = '2';
+
+// Verdor — Firestore Security Rules
+// Multi-tenant model. Every customer/staff doc carries a tenantId pointing
+// to a tenants/{slug} doc. Default deny on everything; collections opt in
+// explicitly as they're introduced.
+//
+// Roles:
+//   customer       — end user, scoped to one vivero
+//   staff_vivero   — vivero employee
+//   tenant_admin   — vivero owner
+//   super_admin    — Verdor / Techbox staff (admin portal only)
+//
+// Until role moves to custom claims (Phase 3), each rule that checks role
+// reads the caller's user doc — costs an extra read per evaluation.
+// Acceptable while traffic is low. The Cloud Function that promotes staff
+// will at the same time mint a custom claim, and we drop the doc read here.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function callerDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function callerRole() { return callerDoc().role; }
+    function callerTenant() { return callerDoc().tenantId; }
+
+    function isSuperAdmin() {
+      return isSignedIn() && callerRole() == 'super_admin';
+    }
+
+    function isTenantStaff(tenantId) {
+      return isSignedIn()
+        && callerTenant() == tenantId
+        && (callerRole() == 'staff_vivero' || callerRole() == 'tenant_admin');
+    }
+
+    function isTenantMember(tenantId) {
+      return isSignedIn() && callerTenant() == tenantId;
+    }
+
+    function tenantExists(tenantId) {
+      return exists(/databases/$(database)/documents/tenants/$(tenantId));
+    }
+
+    // ---------- tenants ----------
+    // The directory of viveros. Public read so the sign-up flow can validate
+    // the code typed by the customer. Writes are super-admin-only for now;
+    // tenant_admins will get scoped update rights in a later iteration.
+
+    match /tenants/{tenantId} {
+      allow get: if true;            // sign-up needs to fetch by slug
+      allow list: if isSuperAdmin(); // no public enumeration of tenants
+
+      allow create: if isSuperAdmin()
+        && request.resource.data.slug == tenantId
+        && request.resource.data.subscriptionTier in ['free', 'pro', 'enterprise'];
+
+      // tenant_admin can edit display fields of THEIR tenant; super_admin
+      // can edit anything. Slug and subscriptionTier are super-admin-only.
+      allow update: if isSuperAdmin()
+        || (
+          isSignedIn()
+          && callerRole() == 'tenant_admin'
+          && callerTenant() == tenantId
+          && request.resource.data.slug == resource.data.slug
+          && request.resource.data.subscriptionTier == resource.data.subscriptionTier
+        );
+
+      allow delete: if isSuperAdmin();
+    }
+
+    // ---------- users ----------
+
+    match /users/{uid} {
+      // Self + tenant staff (same vivero) + super_admin can read.
+      allow read: if isOwner(uid)
+        || isSuperAdmin()
+        || (isSignedIn() && resource.data.tenantId == callerTenant()
+            && (callerRole() == 'staff_vivero' || callerRole() == 'tenant_admin'));
+
+      // Self sign-up: a new user can only create their own doc, with the
+      // canonical schema, default role/membership, and pointing to a tenant
+      // that actually exists. Role escalation is rejected.
+      allow create: if isOwner(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.role == 'customer'
+        && request.resource.data.membership == 'guest'
+        && request.resource.data.tenantId is string
+        && tenantExists(request.resource.data.tenantId)
+        && request.resource.data.keys().hasOnly(
+            ['uid', 'email', 'name', 'role', 'membership',
+             'tenantId', 'city', 'createdAt', 'updatedAt']
+          );
+
+      // Self update: user can edit profile fields but cannot change
+      // uid, email, role, membership, or tenantId. Those are server-managed.
+      allow update: if isOwner(uid)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.membership == resource.data.membership
+        && request.resource.data.tenantId == resource.data.tenantId;
+
+      // Super-admin escape hatch (used later by the role-assignment Cloud
+      // Function; once role moves to custom claims this can drop).
+      allow update: if isSuperAdmin();
+
+      allow delete: if false;
+    }
+
+    // ---------- default deny ----------
+    // Any new collection (plants, garden, qr_scans, ...) must opt in
+    // explicitly with its own match block.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

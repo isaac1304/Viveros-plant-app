@@ -1,5 +1,6 @@
-// Design tokens — Vivero El Zamorano
-// Source: design_handoff_vivero_zamorano (paleta Zamorano, densidad regular)
+// Design tokens — Verdor (default brand)
+// Tenant white-label override of primaryColor lands in Phase 4.
+// Source paleta: design_handoff_vivero_zamorano (verde Zamorano, base por ahora).
 
 export const colors = {
   // Brand greens

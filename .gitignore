@@ -45,3 +45,6 @@ yarn-error.*
 .idea/
 .claude/
 .vscode/
+
+# Firebase CLI cache
+.firebase/

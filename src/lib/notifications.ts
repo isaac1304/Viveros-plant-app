@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import type { Plant } from '@/data/plants';
 import { waterIntervalDays, type WaterLog } from './reminders';
 
-const NOTIFICATION_PREFIX = 'zamorano:water:';
+const NOTIFICATION_PREFIX = 'verdor:water:';
 const isWeb = Platform.OS === 'web';
 
 let notificationsModulePromise: Promise<typeof import('expo-notifications') | null> | null = null;

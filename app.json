@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Zamorano",
-    "slug": "zamorano-plant-app",
-    "scheme": "zamorano",
+    "name": "Verdor",
+    "slug": "verdor-app",
+    "scheme": "verdor",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,14 +15,14 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "cr.zamorano.app",
+      "bundleIdentifier": "app.verdor.customer",
       "infoPlist": {
-        "NSCameraUsageDescription": "Zamorano usa la cámara para identificar plantas y escanear códigos QR.",
-        "NSPhotoLibraryUsageDescription": "Zamorano accede a tus fotos para identificar plantas guardadas en la galería."
+        "NSCameraUsageDescription": "Verdor usa la cámara para identificar plantas y escanear códigos QR de tu vivero.",
+        "NSPhotoLibraryUsageDescription": "Verdor accede a tus fotos para identificar plantas guardadas en la galería."
       }
     },
     "android": {
-      "package": "cr.zamorano.app",
+      "package": "app.verdor.customer",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#3DA35D"
@@ -43,7 +43,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Zamorano usa la cámara para identificar plantas y escanear códigos QR."
+          "cameraPermission": "Verdor usa la cámara para identificar plantas y escanear códigos QR de tu vivero."
         }
       ],
       "expo-font"

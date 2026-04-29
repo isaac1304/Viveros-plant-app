@@ -50,7 +50,7 @@ function NativeQRScanner() {
     setTimeout(() => router.replace(`/plant/${match.id}`), 600);
   };
 
-  const simulateScan = () => handleScan('zamorano://plant/monstera');
+  const simulateScan = () => handleScan('verdor://plant/monstera');
 
   if (!permission) {
     return (
@@ -75,7 +75,7 @@ function NativeQRScanner() {
         <Ionicons name="qr-code-outline" size={64} color={colors.brand[500]} />
         <Text style={[typography.displayLg, { textAlign: 'center' }]}>Permitir cámara</Text>
         <Text style={[typography.bodyMd, { textAlign: 'center', color: colors.text.secondary }]}>
-          La usamos para escanear los QR de las plantas Zamorano.
+          La usamos para escanear los QR de las plantas de tu vivero.
         </Text>
         <Button label="Permitir" onPress={requestPermission} />
         <Pressable onPress={() => router.back()}>
@@ -196,7 +196,7 @@ function NativeQRScanner() {
           textShadowRadius: 6,
         }}
       >
-        Escaneá el QR de tu planta Zamorano
+        Escaneá el QR de tu planta
       </Text>
 
       {/* Demo button: simulate a scan */}

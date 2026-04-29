@@ -1,8 +1,9 @@
 import Svg, { Text as SvgText, Path, G } from 'react-native-svg';
 import { colors } from '@/theme/tokens';
 
-// Wordmark inspired by the existing Vivero El Zamorano logo:
-// "EL ZAMORANO" in green with a curved underline that morphs into "VIVERO".
+// Wordmark for Verdor (default brand). Inspired by the original Vivero El
+// Zamorano hand-drawn logo. Once tenant white-label lands (Phase 4), tenants
+// with their own logoUrl will render an Image instead.
 
 type Props = { size?: number; mono?: boolean };
 

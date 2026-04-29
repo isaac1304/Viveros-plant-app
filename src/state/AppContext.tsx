@@ -4,9 +4,13 @@ import type { WaterLog } from '@/lib/reminders';
 import { scheduleWaterReminders } from '@/lib/notifications';
 import { plants } from '@/data/plants';
 
-const SAVED_KEY = 'zamorano:savedIds:v1';
-const WATER_KEY = 'zamorano:waterLog:v1';
-const HISTORY_KEY = 'zamorano:history:v1';
+// Storage keys are namespaced by app, NOT by user/tenant. In Phase 2 these
+// move to Firestore subcollections (users/{uid}/garden, etc.) and AsyncStorage
+// becomes pure offline cache. Until then a logout doesn't wipe garden state —
+// acceptable for a single-user-per-device demo.
+const SAVED_KEY = 'verdor:savedIds:v1';
+const WATER_KEY = 'verdor:waterLog:v1';
+const HISTORY_KEY = 'verdor:history:v1';
 const DEFAULT_SAVED: string[] = ['monstera', 'helecho'];
 const HISTORY_LIMIT = 20;
 

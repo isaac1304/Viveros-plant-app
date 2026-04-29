@@ -10,24 +10,25 @@ import { colors, radius, shadows, spacing } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 import { getPlantById } from '@/data/plants';
 import { useApp } from '@/state/AppContext';
+import { useUser } from '@/state/UserContext';
 
-type Tab = 'cuidados' | 'plagas' | 'enfermedades' | 'datos' | 'zamorano';
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'cuidados', label: 'Cuidados' },
-  { key: 'plagas', label: 'Plagas' },
-  { key: 'enfermedades', label: 'Enfermedades' },
-  { key: 'datos', label: 'Datos' },
-  { key: 'zamorano', label: 'En Zamorano' },
-];
-
-const ZAMORANO_PHONE = '50622688257';
+type Tab = 'cuidados' | 'plagas' | 'enfermedades' | 'datos' | 'vivero';
 
 export default function PlantDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const plant = getPlantById(id);
   const { isSaved, toggleSave } = useApp();
+  const { tenant } = useUser();
   const [tab, setTab] = useState<Tab>('cuidados');
+
+  const TABS: { key: Tab; label: string }[] = [
+    { key: 'cuidados', label: 'Cuidados' },
+    { key: 'plagas', label: 'Plagas' },
+    { key: 'enfermedades', label: 'Enfermedades' },
+    { key: 'datos', label: 'Datos' },
+    { key: 'vivero', label: `En ${tenant.shortName}` },
+  ];
 
   if (!plant) {
     return (
@@ -43,8 +44,9 @@ export default function PlantDetail() {
   const saved = isSaved(plant.id);
 
   const openWhatsapp = async () => {
-    const msg = encodeURIComponent(`Hola Zamorano, me interesa la ${plant.commonName} que vi en la app.`);
-    const url = `https://wa.me/${ZAMORANO_PHONE}?text=${msg}`;
+    if (!tenant.whatsapp) return;
+    const msg = encodeURIComponent(`Hola ${tenant.shortName}, me interesa la ${plant.commonName} que vi en la app.`);
+    const url = `https://wa.me/${tenant.whatsapp}?text=${msg}`;
     try {
       const can = await Linking.canOpenURL(url);
       if (!can) throw new Error('cant-open');
@@ -191,7 +193,7 @@ export default function PlantDetail() {
             </View>
           )}
 
-          {tab === 'zamorano' && (
+          {tab === 'vivero' && (
             <View style={{ gap: spacing.lg }}>
               {plant.inStore ? (
                 <View
@@ -220,14 +222,17 @@ export default function PlantDetail() {
                   </View>
                   <Text style={typography.displayLg}>{plant.price}</Text>
                   <Text style={typography.bodySm}>
-                    Vivero El Zamorano · Cartago{'\n'}Lun-Sáb 7:30am-5:00pm · Dom 9:30am-5:00pm
+                    {tenant.address ?? tenant.name}
+                    {tenant.hours ? `\n${tenant.hours}` : ''}
                   </Text>
-                  <Button
-                    label="Reservar por WhatsApp"
-                    onPress={openWhatsapp}
-                    fullWidth
-                    iconLeft={<Ionicons name="logo-whatsapp" size={20} color="#fff" />}
-                  />
+                  {tenant.whatsapp && (
+                    <Button
+                      label="Reservar por WhatsApp"
+                      onPress={openWhatsapp}
+                      fullWidth
+                      iconLeft={<Ionicons name="logo-whatsapp" size={20} color="#fff" />}
+                    />
+                  )}
                 </View>
               ) : (
                 <Text style={typography.bodyMd}>
