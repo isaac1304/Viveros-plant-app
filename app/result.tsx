@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollView, View, Text, Image, Pressable, Linking } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +23,7 @@ const ZAMORANO_PHONE = '50622688257';
 
 export default function ResultScreen() {
   const router = useRouter();
-  const { toggleSave, isSaved } = useApp();
+  const { toggleSave, isSaved, addIdentification } = useApp();
   const [tab, setTab] = useState<Tab>('cuidados');
   const params = useLocalSearchParams<{
     matchedPlantId?: string;
@@ -34,10 +34,24 @@ export default function ResultScreen() {
     alternatives?: string;
     details?: string;
   }>();
+  const recordedRef = useRef(false);
 
   const matched = params.matchedPlantId ? getPlantById(params.matchedPlantId) : undefined;
   const confidence = Number(params.confidence ?? '0');
   const lowConfidence = confidence < 60;
+
+  useEffect(() => {
+    if (recordedRef.current) return;
+    if (!params.commonName || !params.imageUri) return;
+    recordedRef.current = true;
+    addIdentification({
+      commonName: params.commonName,
+      scientificName: params.scientificName ?? '',
+      matchedPlantId: params.matchedPlantId || undefined,
+      imageUri: params.imageUri,
+      confidence,
+    });
+  }, [params.commonName, params.imageUri, params.scientificName, params.matchedPlantId, confidence, addIdentification]);
 
   let alternatives: { commonName: string; scientificName: string }[] = [];
   try {

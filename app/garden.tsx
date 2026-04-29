@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { useMemo, useState } from 'react';
+import { View, Text, ScrollView, Pressable, TextInput, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ScreenContainer';
@@ -8,17 +8,45 @@ import { PlantCard } from '@/components/PlantCard';
 import { Button } from '@/components/Button';
 import { colors, radius, spacing } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
-import { plants } from '@/data/plants';
+import { plants, type Plant } from '@/data/plants';
 import { useApp } from '@/state/AppContext';
 
-const FILTERS = ['Todas', 'Necesitan agua', 'Con problemas'] as const;
+type FilterKey = 'todas' | 'riego' | 'atencion';
+const FILTERS: { key: FilterKey; label: string }[] = [
+  { key: 'todas', label: 'Todas' },
+  { key: 'riego', label: 'Riego frecuente' },
+  { key: 'atencion', label: 'Necesitan atención' },
+];
+
+const needsFrequentWater = (p: Plant) =>
+  /diario|frecuente|3x|4x/i.test(p.water);
+
+const needsAttention = (p: Plant) =>
+  p.pests.some((i) => i.severity === 'danger') ||
+  p.diseases.some((i) => i.severity === 'danger');
 
 export default function Garden() {
   const router = useRouter();
   const { savedIds } = useApp();
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>('Todas');
+  const [filter, setFilter] = useState<FilterKey>('todas');
+  const [query, setQuery] = useState('');
 
   const saved = plants.filter((p) => savedIds.includes(p.id));
+
+  const filtered = useMemo(() => {
+    let result = saved;
+    if (filter === 'riego') result = result.filter(needsFrequentWater);
+    else if (filter === 'atencion') result = result.filter(needsAttention);
+    const q = query.trim().toLowerCase();
+    if (q) {
+      result = result.filter(
+        (p) =>
+          p.commonName.toLowerCase().includes(q) ||
+          p.scientificName.toLowerCase().includes(q),
+      );
+    }
+    return result;
+  }, [saved, filter, query]);
 
   return (
     <ScreenContainer withTabBarPadding>
@@ -30,17 +58,63 @@ export default function Garden() {
           </Text>
         </View>
 
+        {saved.length > 0 && (
+          <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.lg }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: spacing.sm,
+                backgroundColor: colors.surface.raised,
+                borderRadius: radius.md,
+                paddingHorizontal: spacing.md,
+                borderWidth: 1,
+                borderColor: colors.border.subtle,
+              }}
+            >
+              <Ionicons name="search" size={18} color={colors.text.tertiary} />
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Buscar planta…"
+                placeholderTextColor={colors.text.tertiary}
+                style={[
+                  {
+                    flex: 1,
+                    paddingVertical: spacing.md,
+                    fontSize: 14,
+                    color: colors.text.primary,
+                  },
+                  Platform.OS === 'web' && ({ outlineStyle: 'none' } as object),
+                ]}
+                returnKeyType="search"
+              />
+              {query.length > 0 && (
+                <Pressable onPress={() => setQuery('')} hitSlop={10}>
+                  <Ionicons name="close-circle" size={18} color={colors.text.tertiary} />
+                </Pressable>
+              )}
+            </View>
+          </View>
+        )}
+
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: spacing.sm, paddingVertical: spacing.lg }}
         >
           {FILTERS.map((f) => {
-            const active = filter === f;
+            const active = filter === f.key;
+            const count =
+              f.key === 'todas'
+                ? saved.length
+                : f.key === 'riego'
+                  ? saved.filter(needsFrequentWater).length
+                  : saved.filter(needsAttention).length;
             return (
               <Pressable
-                key={f}
-                onPress={() => setFilter(f)}
+                key={f.key}
+                onPress={() => setFilter(f.key)}
                 style={{
                   paddingHorizontal: spacing.lg,
                   paddingVertical: spacing.sm,
@@ -48,6 +122,9 @@ export default function Garden() {
                   backgroundColor: active ? colors.brand[700] : colors.surface.raised,
                   borderWidth: 1,
                   borderColor: active ? colors.brand[700] : colors.border.subtle,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
                 }}
               >
                 <Text
@@ -57,8 +134,26 @@ export default function Garden() {
                     color: active ? colors.text.inverse : colors.text.secondary,
                   }}
                 >
-                  {f}
+                  {f.label}
                 </Text>
+                <View
+                  style={{
+                    paddingHorizontal: 6,
+                    paddingVertical: 1,
+                    borderRadius: radius.full,
+                    backgroundColor: active ? 'rgba(255,255,255,0.22)' : colors.brand[100],
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      fontWeight: '700',
+                      color: active ? colors.text.inverse : colors.brand[700],
+                    }}
+                  >
+                    {count}
+                  </Text>
+                </View>
               </Pressable>
             );
           })}
@@ -84,6 +179,32 @@ export default function Garden() {
             </Text>
             <Button label="Identificar planta" onPress={() => router.push('/camera')} />
           </View>
+        ) : filtered.length === 0 ? (
+          <View style={{ alignItems: 'center', paddingVertical: spacing['2xl'], paddingHorizontal: spacing.xl, gap: spacing.md }}>
+            <Ionicons
+              name={query ? 'search-outline' : 'filter-outline'}
+              size={32}
+              color={colors.text.tertiary}
+            />
+            <Text style={[typography.bodyMd, { textAlign: 'center', color: colors.text.secondary }]}>
+              {query
+                ? `No encontramos plantas con "${query}".`
+                : filter === 'riego'
+                  ? 'Ninguna de tus plantas necesita riego frecuente.'
+                  : 'Ninguna de tus plantas tiene problemas reportados.'}
+            </Text>
+            <Pressable
+              onPress={() => {
+                setFilter('todas');
+                setQuery('');
+              }}
+              hitSlop={8}
+            >
+              <Text style={[typography.bodySm, { color: colors.brand[700], fontWeight: '600' }]}>
+                Ver todas →
+              </Text>
+            </Pressable>
+          </View>
         ) : (
           <View
             style={{
@@ -93,7 +214,7 @@ export default function Garden() {
               paddingHorizontal: spacing.xl,
             }}
           >
-            {saved.map((p) => (
+            {filtered.map((p) => (
               <View key={p.id} style={{ flexBasis: '47%', flexGrow: 1 }}>
                 <PlantCard plant={p} variant="full" />
               </View>
