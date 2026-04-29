@@ -8,8 +8,9 @@ import { TabBar } from '@/components/TabBar';
 import { PlantCard } from '@/components/PlantCard';
 import { colors, radius, shadows, spacing } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
-import { plants, articles } from '@/data/plants';
+import { articles } from '@/data/plants';
 import { useApp } from '@/state/AppContext';
+import { useCatalog } from '@/state/CatalogContext';
 import { useAuth, useUser } from '@/state/UserContext';
 import { activeReminders, describeWaterStatus } from '@/lib/reminders';
 
@@ -18,6 +19,7 @@ export default function Home() {
   const user = useUser();
   const { signOut } = useAuth();
   const { savedIds, waterLog, markWatered, history } = useApp();
+  const { plants } = useCatalog();
   const [signingOut, setSigningOut] = useState(false);
   const savedPlants = plants.filter((p) => savedIds.includes(p.id));
   const reminders = activeReminders(savedPlants, waterLog);

@@ -9,7 +9,7 @@ import { colors, radius, shadows, spacing } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 import { Button } from '@/components/Button';
 import { identifyPlant } from '@/lib/identify';
-import { plants } from '@/data/plants';
+import { useCatalog } from '@/state/CatalogContext';
 import { useUser } from '@/state/UserContext';
 
 const isWeb = Platform.OS === 'web';
@@ -264,6 +264,7 @@ function NativeCamera() {
 
 function WebCameraFallback() {
   const router = useRouter();
+  const { plants } = useCatalog();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastFile, setLastFile] = useState<File | null>(null);

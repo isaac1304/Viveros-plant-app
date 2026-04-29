@@ -7,7 +7,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "seed:catalog": "node --experimental-strip-types --env-file=.env scripts/seed-catalog.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",

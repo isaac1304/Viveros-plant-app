@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing } from 'react-native-reanimated';
 import { colors, radius, spacing } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
-import { plants } from '@/data/plants';
+import { useCatalog } from '@/state/CatalogContext';
 import { Button } from '@/components/Button';
 
 const isWeb = Platform.OS === 'web';
@@ -19,6 +19,7 @@ export default function QRScreen() {
 
 function NativeQRScanner() {
   const router = useRouter();
+  const { plants } = useCatalog();
   const [permission, requestPermission] = useCameraPermissions();
   const scannedRef = useRef(false);
   const [scanned, setScanned] = useState(false);
@@ -47,6 +48,7 @@ function NativeQRScanner() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 
     const match = plants.find((p) => data.toLowerCase().includes(p.id)) ?? plants[0];
+    if (!match) return;
     setTimeout(() => router.replace(`/plant/${match.id}`), 600);
   };
 
@@ -249,6 +251,7 @@ function NativeQRScanner() {
 
 function WebQRFallback() {
   const router = useRouter();
+  const { plants } = useCatalog();
   const goToPlant = (plantId: string) => router.replace(`/plant/${plantId}`);
 
   return (

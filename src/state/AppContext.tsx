@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { WaterLog } from '@/lib/reminders';
 import { scheduleWaterReminders } from '@/lib/notifications';
-import { plants } from '@/data/plants';
+import { useCatalog } from './CatalogContext';
 
 // Storage keys are namespaced by app, NOT by user/tenant. In Phase 2 these
 // move to Firestore subcollections (users/{uid}/garden, etc.) and AsyncStorage
@@ -48,6 +48,7 @@ type AppState = {
 const AppContext = createContext<AppState | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const { plants } = useCatalog();
   const [savedIds, setSavedIds] = useState<string[]>(DEFAULT_SAVED);
   const [waterLog, setWaterLog] = useState<WaterLog>(seedWaterLog);
   const [history, setHistory] = useState<IdentificationEntry[]>([]);
@@ -127,7 +128,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!hydrated) return;
     const saved = plants.filter((p) => savedIds.includes(p.id));
     scheduleWaterReminders(saved, waterLog).catch(() => {});
-  }, [savedIds, waterLog, hydrated]);
+  }, [savedIds, waterLog, hydrated, plants]);
 
   const value = useMemo<AppState>(
     () => ({
