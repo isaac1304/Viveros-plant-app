@@ -45,7 +45,8 @@
         {
           "cameraPermission": "Zamorano usa la cámara para identificar plantas y escanear códigos QR."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "router": {}

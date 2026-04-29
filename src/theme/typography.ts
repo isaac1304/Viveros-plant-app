@@ -1,13 +1,20 @@
 import { Platform, type TextStyle } from 'react-native';
 import { colors } from './tokens';
 
-// Editorial system per handoff: Fraunces (display) + system body.
-// On native we'd load Fraunces via expo-font; on web Platform-stack falls through.
-const DISPLAY_FONT = Platform.select({
-  ios: 'Georgia',
-  android: 'serif',
-  web: 'Fraunces, "Source Serif 4", Georgia, serif',
-}) as string;
+// Editorial system: Fraunces (display) + system body.
+// Native loads Fraunces via expo-font (see app/_layout.tsx). On web, the CSS stack falls through.
+// On native we must reference the exact font family per weight, since `fontWeight` does not select a face.
+const isWeb = Platform.OS === 'web';
+
+const DISPLAY_REGULAR = isWeb
+  ? 'Fraunces, "Source Serif 4", Georgia, serif'
+  : 'Fraunces-Regular';
+const DISPLAY_SEMIBOLD = isWeb
+  ? 'Fraunces, "Source Serif 4", Georgia, serif'
+  : 'Fraunces-SemiBold';
+const DISPLAY_BOLD = isWeb
+  ? 'Fraunces, "Source Serif 4", Georgia, serif'
+  : 'Fraunces-Bold';
 
 const BODY_FONT = Platform.select({
   ios: 'System',
@@ -16,14 +23,16 @@ const BODY_FONT = Platform.select({
 }) as string;
 
 export const fonts = {
-  display: DISPLAY_FONT,
+  display: DISPLAY_BOLD,
+  displayRegular: DISPLAY_REGULAR,
+  displaySemibold: DISPLAY_SEMIBOLD,
   body: BODY_FONT,
 };
 
 export const typography = {
   // Display family — for headers, titles, hero text
   displayXl: {
-    fontFamily: DISPLAY_FONT,
+    fontFamily: DISPLAY_BOLD,
     fontSize: 32,
     lineHeight: 36,
     fontWeight: '700',
@@ -31,7 +40,7 @@ export const typography = {
     color: colors.text.primary,
   } satisfies TextStyle,
   displayLg: {
-    fontFamily: DISPLAY_FONT,
+    fontFamily: DISPLAY_BOLD,
     fontSize: 28,
     lineHeight: 32,
     fontWeight: '700',
@@ -39,7 +48,7 @@ export const typography = {
     color: colors.text.primary,
   } satisfies TextStyle,
   displayMd: {
-    fontFamily: DISPLAY_FONT,
+    fontFamily: DISPLAY_BOLD,
     fontSize: 22,
     lineHeight: 28,
     fontWeight: '700',
@@ -48,7 +57,7 @@ export const typography = {
   } satisfies TextStyle,
   // Headings
   headingMd: {
-    fontFamily: DISPLAY_FONT,
+    fontFamily: DISPLAY_BOLD,
     fontSize: 18,
     lineHeight: 24,
     fontWeight: '700',
@@ -56,7 +65,7 @@ export const typography = {
     color: colors.text.primary,
   } satisfies TextStyle,
   headingSm: {
-    fontFamily: DISPLAY_FONT,
+    fontFamily: DISPLAY_SEMIBOLD,
     fontSize: 16,
     lineHeight: 22,
     fontWeight: '700',

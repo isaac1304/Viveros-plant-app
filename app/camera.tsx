@@ -1,17 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator, Platform, Image, ScrollView } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, Platform, Image, ScrollView, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { colors, radius, spacing } from '@/theme/tokens';
+import { colors, radius, shadows, spacing } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 import { Button } from '@/components/Button';
 import { identifyPlant } from '@/lib/identify';
 import { plants } from '@/data/plants';
 
 const isWeb = Platform.OS === 'web';
+const ZAMORANO_PHONE = '50622688257';
+
+const openZamoranoWhatsapp = async () => {
+  const msg = encodeURIComponent('Hola Zamorano, no pude identificar mi planta con la app. ¿Me ayudan?');
+  const url = `https://wa.me/${ZAMORANO_PHONE}?text=${msg}`;
+  try {
+    const can = await Linking.canOpenURL(url);
+    if (!can) throw new Error('cant-open');
+    await Linking.openURL(url);
+  } catch {
+    if (isWeb && typeof window !== 'undefined') window.open(url, '_blank');
+  }
+};
 
 export default function CameraScreen() {
   if (isWeb) return <WebCameraFallback />;
@@ -58,7 +71,7 @@ function NativeCamera() {
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Algo falló';
-      setError(`No pudimos identificar la planta. ${msg}`);
+      setError(msg);
     } finally {
       setBusy(false);
     }
@@ -101,28 +114,15 @@ function NativeCamera() {
     <View style={{ flex: 1, backgroundColor: '#000' }}>
       <CameraView ref={cameraRef} style={{ flex: 1 }} facing="back" />
 
-      {/* Error banner */}
       {error && (
-        <View
-          style={{
-            position: 'absolute',
-            top: 110,
-            left: spacing.lg,
-            right: spacing.lg,
-            backgroundColor: '#FFE8E8',
-            borderRadius: radius.md,
-            padding: spacing.md,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: spacing.sm,
+        <IdentifyErrorSheet
+          message={error}
+          onRetry={() => {
+            setError(null);
+            onShutter();
           }}
-        >
-          <Ionicons name="alert-circle" size={20} color={colors.semantic.error} />
-          <Text style={[typography.bodySm, { color: colors.semantic.error, flex: 1 }]}>{error}</Text>
-          <Pressable onPress={() => setError(null)} hitSlop={10}>
-            <Ionicons name="close" size={18} color={colors.semantic.error} />
-          </Pressable>
-        </View>
+          onDismiss={() => setError(null)}
+        />
       )}
 
       {/* Top bar */}
@@ -257,6 +257,7 @@ function WebCameraFallback() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastFile, setLastFile] = useState<File | null>(null);
 
   const goToDemoResult = (plantId: string) => {
     const plant = plants.find((p) => p.id === plantId);
@@ -277,6 +278,7 @@ function WebCameraFallback() {
   const onUploadFile = async (file: File) => {
     setBusy(true);
     setError(null);
+    setLastFile(file);
     try {
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -303,7 +305,7 @@ function WebCameraFallback() {
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Algo falló';
-      setError(`${msg}. Para que funcione la AI real, agregá tu ANTHROPIC_API_KEY en .env.`);
+      setError(msg);
     } finally {
       setBusy(false);
     }
@@ -379,22 +381,11 @@ function WebCameraFallback() {
           </View>
 
           {error && (
-            <View
-              style={{
-                backgroundColor: '#FFE8E8',
-                borderRadius: radius.md,
-                padding: spacing.md,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: spacing.sm,
-              }}
-            >
-              <Ionicons name="alert-circle" size={20} color={colors.semantic.error} />
-              <Text style={[typography.bodySm, { color: colors.semantic.error, flex: 1 }]}>{error}</Text>
-              <Pressable onPress={() => setError(null)} hitSlop={10}>
-                <Ionicons name="close" size={18} color={colors.semantic.error} />
-              </Pressable>
-            </View>
+            <InlineErrorCard
+              message={error}
+              onRetry={lastFile ? () => onUploadFile(lastFile) : undefined}
+              onDismiss={() => setError(null)}
+            />
           )}
 
           <Text style={[typography.headingMd, { marginTop: spacing.md }]}>Identificá una planta demo</Text>
@@ -471,7 +462,6 @@ function WebFileUploadButton({ busy, onPick }: { busy: boolean; onPick: (file: F
   const inputRef = useRef<HTMLInputElement | null>(null);
   return (
     <View>
-      {/* @ts-expect-error - HTML input only valid on web */}
       <input
         ref={(el: HTMLInputElement | null) => {
           inputRef.current = el;
@@ -526,6 +516,172 @@ function RoundIconButton({ icon, onPress }: { icon: keyof typeof Ionicons.glyphM
     >
       <Ionicons name={icon} size={22} color="#fff" />
     </Pressable>
+  );
+}
+
+function IdentifyErrorSheet({
+  message,
+  onRetry,
+  onDismiss,
+}: {
+  message: string;
+  onRetry: () => void;
+  onDismiss: () => void;
+}) {
+  const looksLikeApiKey = /api[_ ]?key|anthropic|unauthorized|401/i.test(message);
+  return (
+    <Animated.View
+      entering={FadeIn.duration(180)}
+      style={{
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: 'rgba(0,0,0,0.55)',
+        justifyContent: 'flex-end',
+      }}
+    >
+      <Pressable style={{ flex: 1 }} onPress={onDismiss} />
+      <View
+        style={[
+          {
+            backgroundColor: colors.surface.raised,
+            borderTopLeftRadius: radius.xl,
+            borderTopRightRadius: radius.xl,
+            padding: spacing.xl,
+            paddingBottom: spacing['2xl'],
+            gap: spacing.md,
+          },
+          shadows.fab,
+        ]}
+      >
+        <View
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 24,
+            backgroundColor: '#FFE8E8',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Ionicons name="alert-circle" size={28} color={colors.semantic.error} />
+        </View>
+        <Text style={typography.headingMd}>No pudimos identificarla</Text>
+        <Text style={typography.bodySm}>
+          {looksLikeApiKey
+            ? 'Falta configurar la clave de IA. Mientras tanto, podés consultar al equipo de Zamorano.'
+            : 'A veces ayuda mejorar la foto: que se vea bien la hoja o flor, sin sombras y a buena distancia.'}
+        </Text>
+        <Text style={[typography.caption, { color: colors.text.tertiary }]} numberOfLines={2}>
+          Detalle técnico: {message}
+        </Text>
+
+        <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
+          <Button
+            label="Reintentar"
+            onPress={onRetry}
+            iconLeft={<Ionicons name="refresh" size={18} color="#fff" />}
+            fullWidth
+          />
+          <Button
+            label="Consultar a Zamorano por WhatsApp"
+            onPress={openZamoranoWhatsapp}
+            variant="secondary"
+            iconLeft={<Ionicons name="logo-whatsapp" size={18} color={colors.brand[700]} />}
+            fullWidth
+          />
+          <Pressable
+            onPress={onDismiss}
+            style={{ alignItems: 'center', paddingVertical: spacing.md }}
+            hitSlop={8}
+          >
+            <Text style={[typography.bodySm, { color: colors.text.secondary, fontWeight: '600' }]}>
+              Cerrar
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
+
+function InlineErrorCard({
+  message,
+  onRetry,
+  onDismiss,
+}: {
+  message: string;
+  onRetry?: () => void;
+  onDismiss: () => void;
+}) {
+  const looksLikeApiKey = /api[_ ]?key|anthropic|unauthorized|401/i.test(message);
+  return (
+    <View
+      style={{
+        backgroundColor: '#FFF1F1',
+        borderRadius: radius.md,
+        padding: spacing.md,
+        gap: spacing.sm,
+        borderWidth: 1,
+        borderColor: '#F5C7C7',
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        <Ionicons name="alert-circle" size={20} color={colors.semantic.error} />
+        <Text style={[typography.bodySm, { color: colors.semantic.error, flex: 1, fontWeight: '600' }]}>
+          No pudimos identificarla
+        </Text>
+        <Pressable onPress={onDismiss} hitSlop={10}>
+          <Ionicons name="close" size={18} color={colors.semantic.error} />
+        </Pressable>
+      </View>
+      <Text style={[typography.bodySm, { color: colors.text.secondary }]}>
+        {looksLikeApiKey
+          ? 'Falta configurar la clave de IA. Probá consultar al equipo de Zamorano.'
+          : 'Probá una foto más clara de la hoja o flor. Si sigue fallando, consultá al equipo.'}
+      </Text>
+      <Text style={[typography.caption, { color: colors.text.tertiary }]} numberOfLines={2}>
+        {message}
+      </Text>
+      <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: 4 }}>
+        {onRetry && (
+          <Pressable
+            onPress={onRetry}
+            style={{
+              flex: 1,
+              paddingVertical: spacing.sm,
+              borderRadius: radius.sm,
+              backgroundColor: colors.brand[700],
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Reintentar</Text>
+          </Pressable>
+        )}
+        <Pressable
+          onPress={openZamoranoWhatsapp}
+          style={{
+            flex: 1,
+            paddingVertical: spacing.sm,
+            borderRadius: radius.sm,
+            backgroundColor: colors.surface.raised,
+            borderWidth: 1,
+            borderColor: colors.border.subtle,
+            alignItems: 'center',
+            flexDirection: 'row',
+            justifyContent: 'center',
+            gap: 6,
+          }}
+        >
+          <Ionicons name="logo-whatsapp" size={14} color={colors.brand[700]} />
+          <Text style={{ color: colors.brand[700], fontWeight: '700', fontSize: 13 }}>
+            Consultar
+          </Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 

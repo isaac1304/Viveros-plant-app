@@ -1,30 +1,50 @@
-import { useState } from 'react';
-import { View, Text, Pressable, ScrollView, type NativeSyntheticEvent, type NativeScrollEvent, useWindowDimensions } from 'react-native';
+import { useRef, useState } from 'react';
+import { View, Text, Pressable, ScrollView, type NativeSyntheticEvent, type NativeScrollEvent, useWindowDimensions, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useCameraPermissions } from 'expo-camera';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { Button } from '@/components/Button';
 import { colors, radius, spacing } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
+import { ensureNotificationPermission } from '@/lib/notifications';
 
-const SLIDES = [
+type Slide = {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  body: string;
+  iconBg: string;
+  kind: 'info' | 'permission';
+};
+
+const SLIDES: Slide[] = [
   {
-    icon: 'leaf' as const,
+    kind: 'info',
+    icon: 'leaf',
     title: 'Identificá cualquier planta',
     body: 'Tomá una foto y nuestra IA te dice qué planta es, sus cuidados y plagas más comunes.',
     iconBg: colors.brand[500],
   },
   {
-    icon: 'qr-code' as const,
+    kind: 'info',
+    icon: 'qr-code',
     title: 'Escaneá el QR de tus plantas Zamorano',
     body: 'Cada planta que comprás trae su ficha digital — toda la información del experto en tu bolsillo.',
     iconBg: colors.accent.terracotta,
   },
   {
-    icon: 'water' as const,
+    kind: 'info',
+    icon: 'water',
     title: 'Cuidados y recordatorios',
     body: 'Te avisamos cuándo regar, fertilizar y revisar plagas. Tus plantas viven más, vos te preocupás menos.',
     iconBg: colors.accent.sun,
+  },
+  {
+    kind: 'permission',
+    icon: 'notifications',
+    title: 'Cámara y recordatorios',
+    body: 'Necesitamos tu cámara para identificar plantas y queremos avisarte cuándo regar. Vos decidís cuándo se usa cada una.',
+    iconBg: colors.brand[700],
   },
 ];
 
@@ -32,13 +52,46 @@ export default function Onboarding() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const [page, setPage] = useState(0);
+  const [requesting, setRequesting] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const [, requestPermission] = useCameraPermissions();
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const next = Math.round(e.nativeEvent.contentOffset.x / width);
     if (next !== page) setPage(next);
   };
 
+  const current = SLIDES[page];
   const isLast = page === SLIDES.length - 1;
+  const isPermissionSlide = current?.kind === 'permission';
+
+  const goHome = () => router.replace('/home');
+
+  const handleNext = () => {
+    if (!isLast) {
+      scrollRef.current?.scrollTo({ x: width * (page + 1), animated: true });
+      setPage(page + 1);
+      return;
+    }
+    if (isPermissionSlide && Platform.OS !== 'web') {
+      setRequesting(true);
+      Promise.all([requestPermission().catch(() => {}), ensureNotificationPermission().catch(() => false)])
+        .finally(() => {
+          setRequesting(false);
+          goHome();
+        });
+      return;
+    }
+    goHome();
+  };
+
+  const primaryLabel = !isLast
+    ? 'Siguiente'
+    : isPermissionSlide
+      ? requesting
+        ? 'Solicitando…'
+        : 'Permitir acceso'
+      : 'Comenzar';
 
   return (
     <ScreenContainer>
@@ -51,6 +104,7 @@ export default function Onboarding() {
       </View>
 
       <ScrollView
+        ref={scrollRef}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
@@ -112,11 +166,19 @@ export default function Onboarding() {
         </View>
 
         <Button
-          label={isLast ? 'Comenzar' : 'Siguiente'}
-          onPress={() => router.replace('/home')}
+          label={primaryLabel}
+          onPress={handleNext}
           fullWidth
           size="lg"
+          loading={requesting}
         />
+        {isPermissionSlide && !requesting && (
+          <Pressable onPress={goHome} hitSlop={10} style={{ alignItems: 'center' }}>
+            <Text style={[typography.bodySm, { color: colors.text.secondary, fontWeight: '600' }]}>
+              Más tarde
+            </Text>
+          </Pressable>
+        )}
       </View>
     </ScreenContainer>
   );

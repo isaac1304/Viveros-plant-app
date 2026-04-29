@@ -2,12 +2,26 @@ import 'react-native-gesture-handler';
 import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { useFonts } from 'expo-font';
+import { View } from 'react-native';
 import { AppProvider } from '@/state/AppContext';
+import { UserProvider } from '@/state/UserContext';
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    'Fraunces-Regular': require('../assets/fonts/Fraunces-Regular.ttf'),
+    'Fraunces-SemiBold': require('../assets/fonts/Fraunces-SemiBold.ttf'),
+    'Fraunces-Bold': require('../assets/fonts/Fraunces-Bold.ttf'),
+  });
+
+  if (!fontsLoaded) {
+    return <View style={{ flex: 1, backgroundColor: '#FAF7F2' }} />;
+  }
+
   return (
     <SafeAreaProvider>
-      <AppProvider>
+      <UserProvider>
+        <AppProvider>
         <StatusBar style="dark" />
         <Stack
           screenOptions={{
@@ -31,8 +45,10 @@ export default function RootLayout() {
           />
           <Stack.Screen name="result" />
           <Stack.Screen name="plant/[id]" />
+          <Stack.Screen name="history" />
         </Stack>
-      </AppProvider>
+        </AppProvider>
+      </UserProvider>
     </SafeAreaProvider>
   );
 }

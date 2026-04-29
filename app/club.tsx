@@ -6,6 +6,7 @@ import { Button } from '@/components/Button';
 import { colors, radius, shadows, spacing } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
 import { articles } from '@/data/plants';
+import { useUser, membershipLabel } from '@/state/UserContext';
 
 const BENEFITS = [
   { icon: 'pricetag' as const, label: '15% descuento en plantas' },
@@ -15,6 +16,7 @@ const BENEFITS = [
 ];
 
 export default function Club() {
+  const user = useUser();
   return (
     <ScreenContainer withTabBarPadding>
       <ScrollView contentContainerStyle={{ paddingBottom: spacing['2xl'] }} showsVerticalScrollIndicator={false}>
@@ -72,8 +74,12 @@ export default function Club() {
               <Ionicons name="star" size={24} color={colors.surface.raised} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={typography.headingSm}>María, sos miembro Gold</Text>
-              <Text style={typography.bodySm}>Desde marzo 2024</Text>
+              <Text style={typography.headingSm}>
+                {user.name}, sos miembro {membershipLabel(user.membership)}
+              </Text>
+              {user.memberSince && (
+                <Text style={typography.bodySm}>Desde {user.memberSince}</Text>
+              )}
             </View>
           </View>
         </View>
