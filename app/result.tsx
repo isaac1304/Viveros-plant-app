@@ -7,9 +7,10 @@ import { Button } from '@/components/Button';
 import { AlertCard } from '@/components/AlertCard';
 import { colors, radius, shadows, spacing } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
-import { getPlantById, plants, type Plant } from '@/data/plants';
+import type { Plant } from '@/data/plants';
 import type { IdentifyDetails } from '@/lib/identify';
 import { useApp } from '@/state/AppContext';
+import { useCatalog } from '@/state/CatalogContext';
 import { useUser } from '@/state/UserContext';
 
 type Tab = 'cuidados' | 'plagas' | 'enfermedades' | 'datos';
@@ -23,6 +24,7 @@ const TABS: { key: Tab; label: string }[] = [
 export default function ResultScreen() {
   const router = useRouter();
   const { toggleSave, isSaved, addIdentification } = useApp();
+  const { getPlantById } = useCatalog();
   const { tenant } = useUser();
   const [tab, setTab] = useState<Tab>('cuidados');
   const params = useLocalSearchParams<{

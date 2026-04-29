@@ -120,8 +120,28 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ---------- catalog ----------
+    // Per-tenant plant catalog. Each tenant maintains its own list of plants
+    // (the ones they sell / care for). Read by any signed-in member of the
+    // same tenant; write by tenant_admin / staff_vivero of that tenant, or
+    // super_admin. The plant doc id is a stable slug ('monstera', 'helecho')
+    // so the customer's garden can reference it cheaply.
+
+    match /tenants/{tenantId}/catalog/{plantId} {
+      allow read: if isTenantMember(tenantId) || isSuperAdmin();
+
+      allow create, update: if (isTenantStaff(tenantId) || isSuperAdmin())
+        && request.resource.data.id == plantId
+        && request.resource.data.commonName is string
+        && request.resource.data.scientificName is string
+        && request.resource.data.toxic is bool
+        && request.resource.data.inStore is bool;
+
+      allow delete: if isTenantStaff(tenantId) || isSuperAdmin();
+    }
+
     // ---------- default deny ----------
-    // Any new collection (plants, garden, qr_scans, ...) must opt in
+    // Any new collection (garden, qr_scans, ...) must opt in
     // explicitly with its own match block.
     match /{document=**} {
       allow read, write: if false;

@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { View } from 'react-native';
 import { AppProvider } from '@/state/AppContext';
+import { CatalogProvider } from '@/state/CatalogContext';
 import { UserProvider, useAuth } from '@/state/UserContext';
 
 // Routes that don't require authentication. Everything else (home, garden,
@@ -77,10 +78,12 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <UserProvider>
-        <AppProvider>
-          <StatusBar style="dark" />
-          <RootStack />
-        </AppProvider>
+        <CatalogProvider>
+          <AppProvider>
+            <StatusBar style="dark" />
+            <RootStack />
+          </AppProvider>
+        </CatalogProvider>
       </UserProvider>
     </SafeAreaProvider>
   );

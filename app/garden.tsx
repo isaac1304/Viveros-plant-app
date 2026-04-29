@@ -8,8 +8,9 @@ import { PlantCard } from '@/components/PlantCard';
 import { Button } from '@/components/Button';
 import { colors, radius, spacing } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
-import { plants, type Plant } from '@/data/plants';
+import type { Plant } from '@/data/plants';
 import { useApp } from '@/state/AppContext';
+import { useCatalog } from '@/state/CatalogContext';
 
 type FilterKey = 'todas' | 'riego' | 'atencion';
 const FILTERS: { key: FilterKey; label: string }[] = [
@@ -28,6 +29,7 @@ const needsAttention = (p: Plant) =>
 export default function Garden() {
   const router = useRouter();
   const { savedIds } = useApp();
+  const { plants } = useCatalog();
   const [filter, setFilter] = useState<FilterKey>('todas');
   const [query, setQuery] = useState('');
 

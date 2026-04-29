@@ -8,8 +8,8 @@ import { InfoChip } from '@/components/InfoChip';
 import { AlertCard } from '@/components/AlertCard';
 import { colors, radius, shadows, spacing } from '@/theme/tokens';
 import { typography } from '@/theme/typography';
-import { getPlantById } from '@/data/plants';
 import { useApp } from '@/state/AppContext';
+import { useCatalog } from '@/state/CatalogContext';
 import { useUser } from '@/state/UserContext';
 
 type Tab = 'cuidados' | 'plagas' | 'enfermedades' | 'datos' | 'vivero';
@@ -17,6 +17,7 @@ type Tab = 'cuidados' | 'plagas' | 'enfermedades' | 'datos' | 'vivero';
 export default function PlantDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { getPlantById, loading } = useCatalog();
   const plant = getPlantById(id);
   const { isSaved, toggleSave } = useApp();
   const { tenant } = useUser();
@@ -34,8 +35,10 @@ export default function PlantDetail() {
     return (
       <ScreenContainer>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl }}>
-          <Text style={typography.headingMd}>Planta no encontrada</Text>
-          <Button label="Volver" onPress={() => router.back()} variant="ghost" />
+          <Text style={typography.headingMd}>
+            {loading ? 'Cargando…' : 'Planta no encontrada'}
+          </Text>
+          {!loading && <Button label="Volver" onPress={() => router.back()} variant="ghost" />}
         </View>
       </ScreenContainer>
     );
